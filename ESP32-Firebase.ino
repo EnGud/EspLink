@@ -9,12 +9,13 @@ FirebaseJson json;
 #define WIFI_PASSWORD "djea2642"
 #define FIREBASE_HOST "frbasewebapprlcrowdsolutions20.firebaseio.com"
 #define FIREBASE_AUTH "ia4dsTciYNUb6ghqrVkvMhJBf9yJK70B7mwMVK9R"
-
+#define RXD2 16
+#define TXD2 17
 
 String path = "/Test";
 int Info = 20;
 String Dataplassering;
-
+char Inndata;
 
 void setup() {
 
@@ -51,7 +52,11 @@ Firebase.setMaxErrorQueue(firebaseData, 10);
 // Firebase.enableClassicRequest(firebaseData, true);
 // Benyttes dersom vi trenger get og delete-funksjoner senere (Mest sannsynlig ikke).
 //setDeviceTime() henter tid fra serveren. bruke RTC, eller hente tid hver gang man sender?
-
+  Serial.begin(115200);
+  //Serial1.begin(9600, SERIAL_8N1, RXD2, TXD2);
+  Serial2.begin(9600, SERIAL_8N1, RXD2, TXD2);
+  Serial.println("Serial Txd is on pin: "+String(TX));
+  Serial.println("Serial Rxd is on pin: "+String(RX));
 
 if (Firebase.pushInt(firebaseData, path + "/Arnes", Info))
 {
@@ -63,16 +68,16 @@ if (Firebase.pushInt(firebaseData, path + "/Arnes", Info))
 
 
 
-
-
-
-
-
 void loop(){
 int Info = random(10, 35);
 String path = "/Test";
 
-if (Firebase.setInt(firebaseData, path + "/Arnes", Info))
+  while (Serial2.available()) {
+    Serial.print(char(Serial2.read()));
+Inndata = Serial2.read();
+  }
+  
+if (Firebase.setInt(firebaseData, path + "/Arnes", Inndata))
 {
   Serial.println("Data sent");
   delay(5000);
@@ -84,10 +89,11 @@ else
   delay(5000);
 }
 
-
 }
-  
 
+
+
+ 
 
 
 
