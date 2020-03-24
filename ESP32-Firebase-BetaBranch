@@ -1,0 +1,118 @@
+#include <stdio.h>
+#include <WiFi.h>
+#include <FirebaseESP32.h>
+// + #include <time.h>
+
+FirebaseData firebaseData;
+FirebaseJson json;
+
+#define WIFI_SSID "AndroidAPA9EA"
+#define WIFI_PASSWORD "djea2642"
+#define FIREBASE_HOST "frbasewebapprlcrowdsolutions20.firebaseio.com"
+#define FIREBASE_AUTH "ia4dsTciYNUb6ghqrVkvMhJBf9yJK70B7mwMVK9R"
+#define RXD2 16
+#define TXD2 17
+
+//Declarations
+char Indata[32];
+int DataSize = sizeof(Indata);
+char Destination[16];
+int Data[16];
+int i;
+
+  void setup() {
+
+  Serial.begin(115200);
+  Serial.println("");
+  Serial.print("Kobler til nettverk");
+
+//Connect wifi while not connected.
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD); //input SSID og passord
+  Firebase.reconnectWiFi(true);
+
+while(WiFi.status() != WL_CONNECTED){
+        Serial.print(".");
+        delay(300);
+        }
+        
+// + Timeout ved for lang tid, "Prøv igjen"
+//Output success, testing purposes.
+Serial.println("");
+Serial.print("Tilkobling vellykket, ");
+Serial.print("Koblet til IP: ");
+Serial.println(WiFi.localIP());
+Serial.println("");
+delay(100);
+Serial.print("Kobler til Firebase.");
+
+Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
+Firebase.reconnectWiFi(true);
+  // Firebase Innlogging, etterfulgt av antal forsøk ved error, og maks error i queue.
+
+Firebase.setMaxRetry(firebaseData, 3);
+Firebase.setMaxErrorQueue(firebaseData, 10);
+
+ 
+// Firebase.enableClassicRequest(firebaseData, true);
+// Benyttes dersom vi trenger get og delete-funksjoner senere (Mest sannsynlig ikke).
+// + setDeviceTime() henter tid fra serveren. bruke RTC, eller hente tid hver gang man sender?
+
+  Serial2.begin(115200, SERIAL_8N1, RXD2, TXD2);
+  Serial.println("Serial Txd is on pin: "+String(TX));
+  Serial.println("Serial Rxd is on pin: "+String(RX));
+
+//if (Firebase.pushInt(firebaseData, path, Info))
+//{
+//  Serial.println("Data sent");
+//  Dataplassering = firebaseData.dataPath();
+//  Serial.println(Dataplassering);
+//  delay(10*100);}
+
+}
+
+
+  void loop(){
+  
+GetInputString();
+GetNodeID();
+CollectNodeData();
+String path = Destination;
+
+for (i=0; i=15; i++){
+if (Firebase.setInt(firebaseData, path, Data[i])){
+         Serial.println("Data sent");
+         delay(5000);
+}
+else{
+         Serial.println("Feilet!");
+        Serial.println("Feilkode: " + firebaseData.errorReason());
+        delay(5000);
+    }
+}
+  }
+
+
+//Gets input string from UART
+void GetInputString(){
+  
+while (Serial2.available()<DataSize) {
+  for(int n=0; n<32; n++){
+       Serial.print(char(Serial2.read()));
+        Indata[n] = Serial2.read();
+    }
+  }
+}
+
+//Transfers ID-bits
+void GetNodeID(){
+for (i=0; i=15; i++){
+  Destination[i] = Indata[i];
+}
+}
+
+//Transfers databits
+void CollectNodeData(){
+  for (int n=0; n<16; n++){
+  Data[n] = atoi(Indata);
+  }
+}
