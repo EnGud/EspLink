@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include <stdio.h>
-#include <string>
+#include <string.h>
 #include <FirebaseESP32.h>
 #include <wifi.h>
 
@@ -25,12 +25,13 @@ char NodeLight[32];
 char NodeBattery[32];
 char NodeNoise[32];
 
-// int Temperature;
-// int DoorState;
-// int Light;
-// int Battery;
-// int Noise;
-int DataInfo[] = {00, 0, 0, 00, 00};
+ int Temperature;
+ int DoorState;
+ int Light;
+ int Battery;
+ int Noise;
+//int DataInfo[] = {00, 0, 0, 00, 00};
+
 
 int i, j;
 
@@ -112,10 +113,17 @@ void SplitData(){
 char * token = strtok(Indata, ":");
 strcpy(NodeID, token);
 
-for (i=0; i<=4; i++){
 token = strtok(NULL, ":");
-DataInfo[i] = atoi(token);
-}
+Temperature = atoi(token);
+token = strtok(NULL, ":");
+DoorState = atoi(token);
+token = strtok(NULL, ":");
+Light = atoi(token);
+token = strtok(NULL, ":");
+Battery = atoi(token);
+token = strtok(NULL, "@");
+Noise = atoi(token);
+
 
   strcpy(NodeTemp, strcat(NodeID, "/Temp")); 
   strcpy(NodeDoor, strcat(NodeID, "/Door"));
@@ -132,10 +140,10 @@ if (DataAvailable == true){
 }
 SplitData();
 
-for (i=0; i<=4; i++){
-    if (Firebase.setInt(firebaseData, NodeTemp, DataInfo[i])) {
+
+    if (Firebase.setInt(firebaseData, NodeTemp, Temperature)) {
       Serial.println("Temp sent");
-}
+    }
 else {
            Serial.println("Feilet!");
         Serial.println("Feilkode: " + firebaseData.errorReason());
@@ -143,5 +151,4 @@ else {
     
 }
 DataAvailable = false;
-}
 }
