@@ -1,0 +1,234 @@
+#include <Arduino.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <FirebaseESP32.h>
+#include <wifi.h>
+
+FirebaseData firebaseData;
+FirebaseJson json;
+
+#define WIFI_SSID "AndroidAPA9EA"
+#define WIFI_PASSWORD "djea2642"
+//#define WIFI_SSID "Saurenett"
+//#define WIFI_PASSWORD "Saurenett"
+#define FIREBASE_HOST "frbasewebapprlcrowdsolutions20.firebaseio.com"
+#define FIREBASE_AUTH "ia4dsTciYNUb6ghqrVkvMhJBf9yJK70B7mwMVK9R"
+
+//Variable Declarations//
+char Indata[32];
+char NodeID[16] = "Teststring";
+
+char NodeTemp[32];
+char NodeDoor[32];
+char NodeLight[32];
+char NodeBattery[32];
+char NodeNoise[32];
+
+int Temperature;
+int DoorState;
+int Light;
+int Battery;
+int Noise;
+//int DataInfo[] = {00, 0, 0, 00, 00};
+
+int i, j;
+
+bool DataAvailable = false;
+bool DataReady = false;
+bool DataReadyToSend = false;
+
+const int Index = 26;
+char Temp[Index];
+
+//End declarations//
+
+void setup()
+{
+
+  Serial.begin(115200, SERIAL_8N1);
+  Serial.println("");
+  Serial.print("Connecting to Wi-Fi");
+
+  //Connect to WIFI while not connected.
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD); //input SSID og passord
+  Firebase.reconnectWiFi(true);
+
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    Serial.print(".");
+    delay(300);
+  }
+
+  // + Timeout ved for lang tid, "Prøv igjen".
+
+//If success, print "success" and the IP.
+  Serial.println("");
+  Serial.print("Connection established, ");
+  Serial.print("Connected to IP: ");
+  Serial.println(WiFi.localIP());
+  Serial.println("");
+  delay(100);
+  Serial.println("Connecting to Firebase.");
+
+//Firebase setup
+  Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
+  Firebase.reconnectWiFi(true);
+
+  Firebase.setMaxRetry(firebaseData, 3);
+  Firebase.setMaxErrorQueue(firebaseData, 10);
+
+  // Firebase.enableClassicRequest(firebaseData, true);
+  // Benyttes dersom vi trenger get og delete-funksjoner senere (Mest sannsynlig ikke).
+  // + setDeviceTime() henter tid fra serveren. bruke RTC, eller hente tid hver gang man sender? Trengs tidsstamp? Håndteres via Firebase?
+
+  Serial2.begin(115200, SERIAL_8N1);
+  Serial.println("Serial2 Initiated");
+}
+
+void CheckData()
+{
+  if (Serial2.available())
+  {
+    DataAvailable = true;
+  }
+  else
+  {
+    DataAvailable = false;
+  }
+}
+
+
+void GetData()
+{
+
+  if (Serial2.available() > 0)
+  {
+
+    Serial2.readBytesUntil('\0', Temp, Index);
+    Serial.println(Temp);
+    strcpy(Indata, Temp);
+    DataReady = true;
+  }
+  else
+  {
+    DataReady = false;
+  }
+  Serial.println(Indata);
+}
+//Function for splitting incoming data to the right groups, then adds the firebase-address to the NodeID for each data instance.
+void SplitData()
+{
+  //Gets NodeID
+  char *token = strtok(Indata, ":");
+  strcpy(NodeID, token);
+//Get eaach datainfonode, should be replaced by a for-routine.
+  token = strtok(NULL, ":");
+  Temperature = atoi(token);
+  Serial.println(Temperature);
+  token = strtok(NULL, ":");
+  DoorState = atoi(token);
+  Serial.println(DoorState);
+  token = strtok(NULL, ":");
+  Light = atoi(token);
+  Serial.println(Light);
+  token = strtok(NULL, ":");
+  Battery = atoi(token);
+  Serial.println(Battery);
+  token = strtok(NULL, ":");
+  Noise = atoi(token);
+  Serial.println(Noise);
+  delay(50);
+
+//Concatenate the right destination for each data group to the NodeID. Should also be handled by a for-loop.
+  strcpy(NodeTemp, NodeID);
+  strcat(NodeTemp, "/Temp");
+  Serial.println(NodeTemp);
+  strcpy(NodeDoor, NodeID);
+  strcat(NodeDoor, "/Door");
+  Serial.println(NodeDoor);
+  strcpy(NodeLight, NodeID);
+  strcat(NodeLight, "/Light");
+  Serial.println(NodeLight);
+  strcpy(NodeBattery, NodeID);
+  strcat(NodeBattery, "/Battery");
+  Serial.println(NodeBattery);
+  strcpy(token, NodeID);
+  strcpy(NodeNoise, strcat(token, "/Noise"));
+  Serial.println(NodeNoise);
+
+//One of the errors seems to stem from here? somehow adds '\n' or an invisible character to the string, which skews the info
+//making it unable to send, until the destination string is skewed even more to for example "ne's Kontor". Could also stem from
+//UART miscommunication.
+
+  DataReadyToSend = true;
+}
+
+void loop()
+{
+  CheckData();
+
+  if (DataAvailable == true)
+  {
+    GetData();
+  }
+
+  if (DataReady == true)
+  {
+    SplitData();
+  }
+  if (DataReadyToSend == true)
+  {
+    //nested firebase-send routine, pretty straight forward. Enables seeing where the error 
+    if (Firebase.setInt(firebaseData, NodeTemp, Temperature))
+    {
+      Serial.println("Temperature sent");
+      if (Firebase.setInt(firebaseData, NodeDoor, DoorState))
+      {
+        Serial.println("Door sent");
+        if (Firebase.setInt(firebaseData, NodeLight, Light))
+        {
+          Serial.println("Light sent");
+          if (Firebase.setInt(firebaseData, NodeBattery, Battery))
+          {
+            Serial.println("Battery sent");
+
+            if (Firebase.setInt(firebaseData, NodeNoise, Noise))
+            {
+              Serial.println("Noise sent");
+            }
+            else
+            {
+              Serial.println("Feilet!");
+              Serial.println("Feilkode: " + firebaseData.errorReason());
+            }
+          }
+          else
+          {
+            Serial.println("Feilet!");
+            Serial.println("Feilkode: " + firebaseData.errorReason());
+          }
+        }
+        else
+        {
+          Serial.println("Feilet!");
+          Serial.println("Feilkode: " + firebaseData.errorReason());
+        }
+      }
+      else
+      {
+        Serial.println("Feilet!");
+        Serial.println("Feilkode: " + firebaseData.errorReason());
+      }
+    }
+    else
+    {
+      Serial.println("Feilet!");
+      Serial.println("Feilkode: " + firebaseData.errorReason());
+    }
+  }
+
+  DataAvailable = false;
+  DataReady = false;
+  DataReadyToSend = false;
+}
