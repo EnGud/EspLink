@@ -24,12 +24,14 @@ char NodeDoor[32];
 char NodeLight[32];
 char NodeBattery[32];
 char NodeNoise[32];
+char Node_rssi[32];
 
-int Temperature;
-int DoorState;
-int Light;
-int Battery;
-int Noise;
+uint8_t Temperature;
+uint8_t DoorState;
+uint8_t Light;
+uint8_t Battery;
+uint8_t Noise;
+int rssi;
 //int DataInfo[] = {00, 0, 0, 00, 00};
 
 int i, j;
@@ -38,7 +40,7 @@ bool DataAvailable = false;
 bool DataReady = false;
 bool DataReadyToSend = false;
 
-const int Index = 24;
+const int Index = 28;
 char Temp[Index];
 
 //End declarations//
@@ -46,7 +48,7 @@ char Temp[Index];
 void setup()
 {
 
-  Serial.begin(9600, SERIAL_8N1);
+  Serial.begin(115200, SERIAL_8N1);
   Serial.println("");
   Serial.print("Connecting to Wi-Fi");
 
@@ -82,7 +84,7 @@ void setup()
   // Benyttes dersom vi trenger get og delete-funksjoner senere (Mest sannsynlig ikke).
   // + setDeviceTime() henter tid fra serveren. bruke RTC, eller hente tid hver gang man sender? Trengs tidsstamp? Håndteres via Firebase?
 
-  Serial2.begin(9600, SERIAL_8N1);
+  Serial2.begin(115200, SERIAL_8N1);
   Serial.println("Serial2 Initiated");
 }
 
@@ -148,6 +150,9 @@ if (size == 11){
   token = strtok(NULL, ":");
   Noise = atoi(token);
   Serial.println(Noise);
+  token = strtok(NULL, ":");
+  rssi = atoi(token);
+  Serial.println(rssi);
   delay(50);
 
 //Concatenate the right destination for each data group to the NodeID. Should also be handled by a for-loop.
@@ -166,6 +171,9 @@ if (size == 11){
   strcpy(token, NodeID);
   strcpy(NodeNoise, strcat(token, "/Noise"));
   Serial.print(NodeNoise);
+  strcpy(token, NodeID);
+  strcpy(Node_rssi, strcat(token, "/rssi"));
+  Serial.print(Node_rssi);
 
 //One of the errors seems to stem from here? somehow adds '\n' or an invisible character to the string, which skews the info
 //making it unable to send, until the destination string is skewed even more to for example "ne's Kontor". Could also stem from
@@ -210,6 +218,14 @@ void loop()
             if (Firebase.setInt(firebaseData, NodeNoise, Noise))
             {
               Serial.println("Noise sent");
+
+             if (Firebase.setInt(firebaseData, Node_rssi, rssi)){
+               Serial.println("rssi sent");
+             } else
+            {
+              Serial.println("Feilet!");
+              Serial.println("Feilkode: " + firebaseData.errorReason());
+            }
             }
             else
             {
