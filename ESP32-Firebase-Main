@@ -142,14 +142,8 @@ if (size == 11){
   DoorState = atoi(token);
   Serial.println(DoorState);
   token = strtok(NULL, ":");
-  Light = atoi(token);
-  Serial.println(Light);
-  token = strtok(NULL, ":");
   Battery = atoi(token);
   Serial.println(Battery);
-  token = strtok(NULL, ":");
-  Noise = atoi(token);
-  Serial.println(Noise);
   token = strtok(NULL, ":");
   rssi = atoi(token);
   Serial.println(rssi);
@@ -162,15 +156,9 @@ if (size == 11){
   strcpy(NodeDoor, NodeID);
   strcat(NodeDoor, "/Door");
   Serial.print(NodeDoor);
-  strcpy(NodeLight, NodeID);
-  strcat(NodeLight, "/Light");
-  Serial.print(NodeLight);
   strcpy(NodeBattery, NodeID);
   strcat(NodeBattery, "/Battery");
   Serial.print(NodeBattery);
-  strcpy(token, NodeID);
-  strcpy(NodeNoise, strcat(token, "/Noise"));
-  Serial.print(NodeNoise);
   strcpy(token, NodeID);
   strcpy(Node_rssi, strcat(token, "/rssi"));
   Serial.print(Node_rssi);
@@ -208,16 +196,9 @@ void loop()
       if (Firebase.setInt(firebaseData, NodeDoor, DoorState))
       {
         Serial.println("Door sent");
-        if (Firebase.setInt(firebaseData, NodeLight, Light))
-        {
-          Serial.println("Light sent");
           if (Firebase.setInt(firebaseData, NodeBattery, Battery))
           {
             Serial.println("Battery sent");
-
-            if (Firebase.setInt(firebaseData, NodeNoise, Noise))
-            {
-              Serial.println("Noise sent");
 
              if (Firebase.setInt(firebaseData, Node_rssi, rssi)){
                Serial.println("rssi sent");
@@ -244,19 +225,8 @@ void loop()
           Serial.println("Feilet!");
           Serial.println("Feilkode: " + firebaseData.errorReason());
         }
-      }
-      else
-      {
-        Serial.println("Feilet!");
-        Serial.println("Feilkode: " + firebaseData.errorReason());
-      }
-    }
-    else
-    {
-      Serial.println("Feilet!");
-      Serial.println("Feilkode: " + firebaseData.errorReason());
-    }
-  }
+      
+
 
   DataAvailable = false;
   DataReady = false;
