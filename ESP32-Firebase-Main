@@ -135,45 +135,45 @@ void SplitData()
   //if som midlertidig løsning for inn-data som ikke passer NodeID-størrelsen. fjerner gibberish.
   if (size == 11)
   {
- //   token = strtok(NULL, ":");
- //   temp = atoi(token);
- //   Serial.println(temp);
+    token = strtok(NULL, ":");
+    temp = atoi(token);
+    Serial.println(temp);
     token = strtok(NULL, ":");
     doorState = atoi(token);
     Serial.println(doorState);
+    //token = strtok(NULL, ":");
+    //light = atoi(token);
+    //Serial.println(light);
     token = strtok(NULL, ":");
-    light = atoi(token);
-    Serial.println(light);
- //   token = strtok(NULL, ":");
- //   batteryPower = atoi(token);
- //   Serial.println(batteryPower);
-  //  token = strtok(NULL, ":");
-  //  noise = atoi(token);
- //   Serial.println(noise);
-    token = strtok(NULL, ":");
-    rssi = atoi(token);
-    Serial.println(rssi);
+    batteryPower = atoi(token);
+    Serial.println(batteryPower);
+    //token = strtok(NULL, ":");
+    //noise = atoi(token);
+    //Serial.println(noise);
+    //token = strtok(NULL, ":");
+    //rssi = atoi(token);
+    //Serial.println(rssi);
     delay(50);
 
     //Concatenate the right destination for each data group to the NodeID. Should also be handled by a for-loop.
-//    strcpy(NodeTemp, NodeID);
-//    strcat(NodeTemp, "/temp");
-//    Serial.print(NodeTemp);
+    strcpy(NodeTemp, NodeID);
+    strcat(NodeTemp, "/temp");
+    Serial.print(NodeTemp);
     strcpy(NodeDoor, NodeID);
     strcat(NodeDoor, "/doorState");
     Serial.print(NodeDoor);
-    strcpy(Nodelight, NodeID);
-    strcat(Nodelight, "/light");
-    Serial.print(Nodelight);
- //   strcpy(NodebatteryPower, NodeID);
- //   strcat(NodebatteryPower, "/batteryPower");
- //   Serial.print(NodebatteryPower);
- //   strcpy(token, NodeID);
- //   strcpy(Nodenoise, strcat(token, "/noise"));
-//    Serial.print(Nodenoise);
-    strcpy(token, NodeID);
-    strcpy(Node_rssi, strcat(token, "/rssi"));
-    Serial.print(Node_rssi);
+    //strcpy(Nodelight, NodeID);
+    //strcat(Nodelight, "/light");
+    //Serial.print(Nodelight);
+    strcpy(NodebatteryPower, NodeID);
+    strcat(NodebatteryPower, "/batteryPower");
+    Serial.print(NodebatteryPower);
+    //strcpy(token, NodeID);
+    //strcpy(Nodenoise, strcat(token, "/noise"));
+    //Serial.print(Nodenoise);
+    //strcpy(token, NodeID);
+    //strcpy(Node_rssi, strcat(token, "/rssi"));
+    //Serial.print(Node_rssi);
 
     //One of the errors seems to stem from here? somehow adds '\n' or an invisible character to the string, which skews the info
     //making it unable to send, until the destination string is skewed even more to for example "ne's Kontor". Could also stem from
@@ -203,13 +203,13 @@ void loop()
   if (DataReadyToSend == true)
   {
     //nested firebase-send routine, pretty straight forward. Enables seeing where the error
-    if (Firebase.setInt(firebaseData, NodeDoor, doorState))
+    if (Firebase.setInt(firebaseData, NodeTemp, temp))
     {
     Serial.println("Door sent");
-    if (Firebase.setInt(firebaseData, Node_rssi, rssi)){
+    if (Firebase.setInt(firebaseData, NodeDoor, doorState)){
         Serial.println("rssi sent");
         
-        if (Firebase.setInt(firebaseData, NodeLight, Light))
+        if (Firebase.setInt(firebaseData, NodebatteryPower, batteryPower))
         {
         Serial.println("Light sent");
         }
