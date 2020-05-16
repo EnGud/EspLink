@@ -21,16 +21,16 @@ char NodeID[16] = "Teststring";
 
 char NodeTemp[32];
 char NodeDoor[32];
-char NodeLight[32];
-char NodeBattery[32];
-char NodeNoise[32];
+char Nodelight[32];
+char NodebatteryPower[32];
+char Nodenoise[32];
 char Node_rssi[32];
 
-uint8_t Temperature;
-uint8_t DoorState;
-uint8_t Light;
-uint8_t Battery;
-uint8_t Noise;
+uint8_t temp;
+uint8_t doorState;
+uint8_t light;
+uint8_t batteryPower;
+uint8_t noise;
 int rssi;
 //int DataInfo[] = {00, 0, 0, 00, 00};
 
@@ -64,7 +64,7 @@ void setup()
 
   // + Timeout ved for lang tid, "Prøv igjen".
 
-//If success, print "success" and the IP.
+  //If success, print "success" and the IP.
   Serial.println("");
   Serial.print("Connection established, ");
   Serial.print("Connected to IP: ");
@@ -73,7 +73,7 @@ void setup()
   delay(100);
   Serial.println("Connecting to Firebase.");
 
-//Firebase setup
+  //Firebase setup
   Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
   Firebase.reconnectWiFi(true);
 
@@ -100,7 +100,6 @@ void CheckData()
   }
 }
 
-
 void GetData()
 {
 
@@ -110,9 +109,9 @@ void GetData()
     Serial2.readBytesUntil('\0', Temp, Index);
     Serial.println(Temp);
     strcpy(Indata, Temp);
-      Serial.print("Indata er: ");
- int size = strlen(Indata);
- Serial.println(size);
+    Serial.print("Indata er: ");
+    int size = strlen(Indata);
+    Serial.println(size);
     DataReady = true;
   }
   else
@@ -132,46 +131,60 @@ void SplitData()
   Serial.println("Stringlength er");
   Serial.print(size);
   Serial.println(" chars");
-//Get eaach datainfonode, should be replaced by a for-routine.
-//if som midlertidig løsning for inn-data som ikke passer NodeID-størrelsen. fjerner gibberish.
-if (size == 11){
-  token = strtok(NULL, ":");
-  Temperature = atoi(token);
-  Serial.println(Temperature);
-  token = strtok(NULL, ":");
-  DoorState = atoi(token);
-  Serial.println(DoorState);
-  token = strtok(NULL, ":");
-  Battery = atoi(token);
-  Serial.println(Battery);
-  token = strtok(NULL, ":");
-  rssi = atoi(token);
-  Serial.println(rssi);
-  delay(50);
+  //Get eaach datainfonode, should be replaced by a for-routine.
+  //if som midlertidig løsning for inn-data som ikke passer NodeID-størrelsen. fjerner gibberish.
+  if (size == 11)
+  {
+ //   token = strtok(NULL, ":");
+ //   temp = atoi(token);
+ //   Serial.println(temp);
+    token = strtok(NULL, ":");
+    doorState = atoi(token);
+    Serial.println(doorState);
+    token = strtok(NULL, ":");
+    light = atoi(token);
+    Serial.println(light);
+ //   token = strtok(NULL, ":");
+ //   batteryPower = atoi(token);
+ //   Serial.println(batteryPower);
+  //  token = strtok(NULL, ":");
+  //  noise = atoi(token);
+ //   Serial.println(noise);
+    token = strtok(NULL, ":");
+    rssi = atoi(token);
+    Serial.println(rssi);
+    delay(50);
 
-//Concatenate the right destination for each data group to the NodeID. Should also be handled by a for-loop.
-  strcpy(NodeTemp, NodeID);
-  strcat(NodeTemp, "/Temp");
-  Serial.print(NodeTemp);
-  strcpy(NodeDoor, NodeID);
-  strcat(NodeDoor, "/Door");
-  Serial.print(NodeDoor);
-  strcpy(NodeBattery, NodeID);
-  strcat(NodeBattery, "/Battery");
-  Serial.print(NodeBattery);
-  strcpy(token, NodeID);
-  strcpy(Node_rssi, strcat(token, "/rssi"));
-  Serial.print(Node_rssi);
+    //Concatenate the right destination for each data group to the NodeID. Should also be handled by a for-loop.
+//    strcpy(NodeTemp, NodeID);
+//    strcat(NodeTemp, "/temp");
+//    Serial.print(NodeTemp);
+    strcpy(NodeDoor, NodeID);
+    strcat(NodeDoor, "/doorState");
+    Serial.print(NodeDoor);
+    strcpy(Nodelight, NodeID);
+    strcat(Nodelight, "/light");
+    Serial.print(Nodelight);
+ //   strcpy(NodebatteryPower, NodeID);
+ //   strcat(NodebatteryPower, "/batteryPower");
+ //   Serial.print(NodebatteryPower);
+ //   strcpy(token, NodeID);
+ //   strcpy(Nodenoise, strcat(token, "/noise"));
+//    Serial.print(Nodenoise);
+    strcpy(token, NodeID);
+    strcpy(Node_rssi, strcat(token, "/rssi"));
+    Serial.print(Node_rssi);
 
-//One of the errors seems to stem from here? somehow adds '\n' or an invisible character to the string, which skews the info
-//making it unable to send, until the destination string is skewed even more to for example "ne's Kontor". Could also stem from
-//UART miscommunication.
+    //One of the errors seems to stem from here? somehow adds '\n' or an invisible character to the string, which skews the info
+    //making it unable to send, until the destination string is skewed even more to for example "ne's Kontor". Could also stem from
+    //UART miscommunication.
 
-  DataReadyToSend = true;
-}
-else{
-  DataReadyToSend = false;
-}
+    DataReadyToSend = true;
+  }
+  else
+  {
+    DataReadyToSend = false;
+  }
 }
 
 void loop()
@@ -189,50 +202,41 @@ void loop()
   }
   if (DataReadyToSend == true)
   {
-    //nested firebase-send routine, pretty straight forward. Enables seeing where the error 
-    if (Firebase.setInt(firebaseData, NodeTemp, Temperature))
+    //nested firebase-send routine, pretty straight forward. Enables seeing where the error
+    if (Firebase.setInt(firebaseData, NodeDoor, doorState))
     {
-      Serial.println("Temperature sent");
-      if (Firebase.setInt(firebaseData, NodeDoor, DoorState))
-      {
-        Serial.println("Door sent");
-          if (Firebase.setInt(firebaseData, NodeBattery, Battery))
-          {
-            Serial.println("Battery sent");
-
-             if (Firebase.setInt(firebaseData, Node_rssi, rssi)){
-               Serial.println("rssi sent");
-             } else
-            {
-              Serial.println("Feilet!");
-              Serial.println("Feilkode: " + firebaseData.errorReason());
-            }
-            }
-            else
-            {
-              Serial.println("Feilet!");
-              Serial.println("Feilkode: " + firebaseData.errorReason());
-            }
-          }
-          else
-          {
-            Serial.println("Feilet!");
-            Serial.println("Feilkode: " + firebaseData.errorReason());
-          }
-        }
-        else
+    Serial.println("Door sent");
+    if (Firebase.setInt(firebaseData, Node_rssi, rssi)){
+        Serial.println("rssi sent");
+        
+        if (Firebase.setInt(firebaseData, NodeLight, Light))
         {
-          Serial.println("Feilet!");
-          Serial.println("Feilkode: " + firebaseData.errorReason());
+        Serial.println("Light sent");
         }
-      
+         else
+    {
+      Serial.println("Feilet!");
+      Serial.println("Feilkode: " + firebaseData.errorReason());
+    }
+    }
+     else
+    {
+      Serial.println("Feilet!");
+      Serial.println("Feilkode: " + firebaseData.errorReason());
+    }
+    }
 
+    else
+    {
+      Serial.println("Feilet!");
+      Serial.println("Feilkode: " + firebaseData.errorReason());
+    }
+  }
 
   DataAvailable = false;
   DataReady = false;
   DataReadyToSend = false;
 }
-
 
 //firebasesetint(firebasedatabase, errordestination, errornode)
 //print nodeID when error to firebase, to find nodes with error.
