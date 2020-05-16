@@ -133,7 +133,7 @@ void SplitData()
   Serial.println(" chars");
   //Get eaach datainfonode, should be replaced by a for-routine.
   //if som midlertidig løsning for inn-data som ikke passer NodeID-størrelsen. fjerner gibberish.
-  if (size == 11)
+  if (size == 13)
   {
     token = strtok(NULL, ":");
     temp = atoi(token);
