@@ -1,0 +1,263 @@
+#include <Arduino.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <FirebaseESP32.h>
+#include <wifi.h>
+
+FirebaseData firebaseData;
+FirebaseJson json;
+
+
+#define WIFI_SSID "Input Your SSID Here"
+#define WIFI_PASSWORD "Input your password here"
+#define FIREBASE_HOST "Input your Firebase_Host here"
+#define FIREBASE_AUTH "Input your Firebase_Auth here"
+
+//Variable Declarations//
+char Indata[32];
+char NodeID[16] = "Teststring";
+
+char NodeTemp[32];
+char NodeDoor[32];
+char NodebatteryPower[32];
+
+uint8_t temp;
+uint8_t doorState;
+uint8_t batteryPower;
+//int DataInfo[] = {00, 0, 0, 00, 00};
+
+int i, j;
+
+bool DataAvailable = false;
+bool DataReady = false;
+bool DataReadyToSend = false;
+
+const int Index = 28;
+char Temp[Index];
+
+//End declarations//
+
+void setup()
+{
+
+  Serial.begin(115200, SERIAL_8N1);
+  Serial.println("");
+  Serial.print("Connecting to Wi-Fi");
+
+  //Connect to WIFI while not connected.
+  //input SSID og passord in the brackets.
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD); 
+
+  Firebase.reconnectWiFi(true);
+
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    Serial.print(".");
+    delay(300);
+  }
+
+  //If success, print "success" and the IP.
+  Serial.println("");
+  Serial.print("Connection established, ");
+  Serial.print("Connected to IP: ");
+  Serial.println(WiFi.localIP());
+  Serial.println("");
+  delay(100);
+  Serial.println("Connecting to Firebase.");
+
+  //Firebase setup
+  Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
+  Firebase.reconnectWiFi(true);
+
+  Firebase.setMaxRetry(firebaseData, 3);
+  Firebase.setMaxErrorQueue(firebaseData, 10);
+
+  // Firebase.enableClassicRequest(firebaseData, true);
+  // Benyttes dersom vi trenger get og delete-funksjoner senere (Mest sannsynlig ikke).
+  // + setDeviceTime() henter tid fra serveren. bruke RTC, eller hente tid hver gang man sender? Trengs tidsstamp? Håndteres via Firebase?
+
+  Serial2.begin(115200, SERIAL_8N1);
+  Serial.println("Serial2 Initiated");
+}
+
+void CheckData()
+{
+  if (Serial2.available())
+  {
+    DataAvailable = true;
+  }
+  else
+  {
+    DataAvailable = false;
+  }
+}
+
+void GetData()
+{
+
+  if (Serial2.available() > 0)
+  {
+
+    Serial2.readBytesUntil('\0', Temp, Index);
+    Serial.println(Temp);
+    strcpy(Indata, Temp);
+    Serial.print("Indata er: ");
+    int size = strlen(Indata);
+    Serial.println(size);
+    DataReady = true;
+  }
+  else
+  {
+    DataReady = false;
+  }
+  Serial.println(Indata);
+}
+//Function for splitting incoming data to the right groups, then adds the firebase-address to the NodeID for each data instance.
+void SplitData()
+{
+  //Gets NodeID
+  char *token = strtok(Indata, ":");
+  strcpy(NodeID, token);
+  Serial.println(NodeID);
+  int size = strlen(NodeID);
+  Serial.println("Stringlength er");
+  Serial.print(size);
+  Serial.println(" chars");
+  //Get eaach datainfonode, should be replaced by a for-routine.
+  //if som midlertidig løsning for inn-data som ikke passer NodeID-størrelsen. fjerner gibberish.
+  if (size == 11)
+  {
+    token = strtok(NULL, ":");
+    temp = atoi(token);
+    Serial.println(temp);
+    token = strtok(NULL, ":");
+    doorState = atoi(token);
+    Serial.println(doorState);
+    token = strtok(NULL, ":");
+    light = atoi(token);
+    Serial.println(light);
+    token = strtok(NULL, ":");
+    batteryPower = atoi(token);
+    Serial.println(batteryPower);
+    token = strtok(NULL, ":");
+    noise = atoi(token);
+    Serial.println(noise);
+    token = strtok(NULL, ":");
+    rssi = atoi(token);
+    Serial.println(rssi);
+    delay(50);
+
+    //Concatenate the right destination for each data group to the NodeID. Should also be handled by a for-loop.
+    strcpy(NodeTemp, NodeID);
+    strcat(NodeTemp, "/temp");
+    Serial.println(NodeTemp);
+    strcpy(NodeDoor, NodeID);
+    strcat(NodeDoor, "/doorState");
+    Serial.println(NodeDoor);
+    strcpy(Nodelight, NodeID);
+    strcat(Nodelight, "/light");
+    Serial.println(Nodelight);
+    strcpy(NodebatteryPower, NodeID);
+    strcat(NodebatteryPower, "/batteryPower");
+    Serial.println(NodebatteryPower);
+    strcpy(token, NodeID);
+    strcpy(Nodenoise, strcat(token, "/noise"));
+    Serial.println(Nodenoise);
+    strcpy(token, NodeID);
+    strcpy(Node_rssi, strcat(token, "/rssi"));
+    Serial.println(Node_rssi);
+
+    //One of the errors seems to stem from here? somehow adds '\n' or an invisible character to the string, which skews the info
+    //making it unable to send, until the destination string is skewed even more to for example "ne's Kontor". Could also stem from
+    //UART miscommunication.
+
+    DataReadyToSend = true;
+  }
+  else
+  {
+    DataReadyToSend = false;
+  }
+}
+
+void loop()
+{
+  CheckData();
+
+  if (DataAvailable == true)
+  {
+    GetData();
+  }
+
+  if (DataReady == true)
+  {
+    SplitData();
+  }
+  if (DataReadyToSend == true)
+  {
+    //nested firebase-send routine, pretty straight forward. Enables seeing where the error
+    if (Firebase.setInt(firebaseData, NodeTemp, temp))
+    {
+      Serial.println("temp sent");
+      if (Firebase.setInt(firebaseData, NodeDoor, doorState))
+      {
+        Serial.println("Door sent");
+        if (Firebase.setInt(firebaseData, Nodelight, light))
+        {
+          Serial.println("light sent");
+          if (Firebase.setInt(firebaseData, NodebatteryPower, batteryPower))
+          {
+            Serial.println("batteryPower sent");
+
+            if (Firebase.setInt(firebaseData, Nodenoise, noise))
+            {
+              Serial.println("noise sent");
+
+              if (Firebase.setInt(firebaseData, Node_rssi, rssi))
+              {
+                Serial.println("rssi sent");
+              }
+              else
+              {
+                Serial.println("Feilet!");
+                Serial.println("Feilkode: " + firebaseData.errorReason());
+              }
+            }
+            else
+            {
+              Serial.println("Feilet!");
+              Serial.println("Feilkode: " + firebaseData.errorReason());
+            }
+          }
+          else
+          {
+            Serial.println("Feilet!");
+            Serial.println("Feilkode: " + firebaseData.errorReason());
+          }
+        }
+        else
+        {
+          Serial.println("Feilet!");
+          Serial.println("Feilkode: " + firebaseData.errorReason());
+        }
+      }
+      else
+      {
+        Serial.println("Feilet!");
+        Serial.println("Feilkode: " + firebaseData.errorReason());
+      }
+    }
+    else
+    {
+      Serial.println("Feilet!");
+      Serial.println("Feilkode: " + firebaseData.errorReason());
+    }
+  }
+
+  DataAvailable = false;
+  DataReady = false;
+  DataReadyToSend = false;
+}
+
+//firebasesetint(firebasedatabase, errordestination, errornode)
+//print nodeID when error to firebase, to find nodes with error.
